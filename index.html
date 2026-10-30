@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Biên bản VT</title>
+<meta name="theme-color" content="#DA251D">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon.png">
+<!-- iPhone -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Biên bản VT">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root { --red:#DA251D; }
+  html, body { margin:0; height:100%; background:#fff; overflow:hidden;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { position:fixed; inset:0; padding-top: env(safe-area-inset-top);
+    background: var(--red); }
+  iframe { width:100%; height:100%; border:0; display:block; background:#fff; }
+  #splash { position:fixed; inset:0; background:var(--red); color:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; z-index:5; transition:opacity .35s; }
+  #splash img { width:96px; height:96px; border-radius:22px;
+    box-shadow:0 8px 24px rgba(0,0,0,.25); }
+  #splash .name { font-size:20px; font-weight:700; }
+  .spin { width:28px; height:28px; border:3px solid rgba(255,255,255,.35);
+    border-top-color:#fff; border-radius:50%; animation:s 0.9s linear infinite; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  #fallback { display:none; margin-top:8px; text-align:center; font-size:14px; padding:0 24px; }
+  #fallback a { display:inline-block; margin-top:10px; background:#fff; color:var(--red);
+    padding:10px 18px; border-radius:10px; font-weight:700; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <iframe id="frame" title="Biên bản Vật tư MN"
+    allow="camera; microphone; geolocation; clipboard-read; clipboard-write; fullscreen"
+    referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
+<div id="splash">
+  <img src="icon-192.png" alt="">
+  <div class="name">Biên bản Vật tư</div>
+  <div class="spin"></div>
+  <div id="fallback">
+    Mạng chậm hoặc app chưa tải được.
+    <br><a id="direct" href="#">Mở trực tiếp</a>
+  </div>
+</div>
+
+<script>
+  // ĐỔI LINK Ở ĐÂY nếu deploy Apps Script mới
+  var APP_URL = "https://script.google.com/macros/s/AKfycbwV4J-5M2mfHL3y2aW2GdBss1sCftq-0Pcs1hKJ3UmPDw53GEMVEHnPeAn0ezMJzho6eQ/exec";
+
+  var frame = document.getElementById("frame");
+  var splash = document.getElementById("splash");
+  document.getElementById("direct").href = APP_URL;
+
+  frame.addEventListener("load", function () {
+    splash.style.opacity = "0";
+    setTimeout(function () { splash.style.display = "none"; }, 400);
+  });
+  frame.src = APP_URL;
+
+  // Sau 15 giây chưa tải xong -> hiện nút mở trực tiếp
+  setTimeout(function () {
+    if (splash.style.display !== "none") {
+      document.getElementById("fallback").style.display = "block";
+    }
+  }, 15000);
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+</script>
+</body>
+</html>
