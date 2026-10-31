@@ -243,6 +243,8 @@
   .dtabs .btn.on { background: var(--pri); border-color: #a30f16; color: #fff; }
   .dtbl.vttbl { width: auto; min-width: 60%; max-width: 100%; }
   .vttbl td:nth-child(2) { min-width: 260px; max-width: 460px; }
+  .ph.add { flex-direction: column; gap: 2px; font-size: 22px; line-height: 1.1; }
+  .ph.add small { font-size: 11px; font-weight: 600; color: var(--muted); }
   .btn.xem { min-height: 30px; padding: 2px 10px; font-size: 12.5px; white-space: nowrap; }
   .dtbl tr.click { cursor: pointer; }
   .dtbl tr.click:hover td { background: #f7faff; }
@@ -277,7 +279,7 @@
 <body>
 <div id="app"></div>
 <div id="overlay" class="overlay hidden"></div>
-<input id="filePick" type="file" accept="image/*" capture="environment" class="hidden">
+<input id="filePick" type="file" accept="image/*" capture="environment" class="hidden"><input id="fileCam" type="file" accept="image/*" capture="environment" class="hidden"><input id="fileGal" type="file" accept="image/*" multiple class="hidden">
 
 <script>
 /*! jsQR 1.4.0 | Apache-2.0 | github.com/cozmo/jsQR */
@@ -1454,7 +1456,7 @@ var LOGO_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAggAAABTCAMAAADN9
 var S = { token: null, user: null, vatTu: [], stores: [], view: 'mine', stack: [], cache: {}, logo: '' };
 var LG = '';
 S.logo = (LG && LG.indexOf('<') < 0) ? LG : LOGO_DATA; // xem file tĩnh hoặc Code.gs cũ vẫn ra logo nhúng sẵn
-var API_URL = 'https://script.google.com/macros/s/AKfycbyX33DMgGQnSiMYm6Mf6egaPW4Bw_ukF2T5omewJ2CXRXcpnHA2-GGv-zcLpIPNOSBY8g/exec'; // chạy ở github.io: bản dựng điền link /exec của Apps Script vào đây; trong Apps Script để trống
+var API_URL = 'https://script.google.com/macros/s/AKfycbwV4J-5M2mfHL3y2aW2GdBss1sCftq-0Pcs1hKJ3UmPDw53GEMVEHnPeAn0ezMJzho6eQ/exec'; // chạy ở github.io: bản dựng điền link /exec của Apps Script vào đây; trong Apps Script để trống
 function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (resolve, reject) {
@@ -1572,6 +1574,14 @@ function pickImage() {
     f.click();
   });
 }
+/* ảnh hiện trường: chụp mới (cam) hoặc chọn nhiều ảnh có sẵn trong thư viện điện thoại (gal) */
+function pickImages(gal) {
+  return new Promise(function (resolve) {
+    var f = $(gal ? '#fileGal' : '#fileCam'); f.value = '';
+    f.onchange = function () { if (f.files && f.files.length) resolve([].slice.call(f.files)); };
+    f.click();
+  });
+}
 function loadImg(file) {
   return new Promise(function (res, rej) { var img = new Image(); img.onload = function () { res(img); }; img.onerror = rej; img.src = URL.createObjectURL(file); });
 }
@@ -1647,7 +1657,7 @@ function shell() {
     '<aside class="side">' + (S.logo ? '<div class="logobox"><img src="' + esc(S.logo) + '" alt="WinCommerce" onerror="this.onerror=null;this.src=LOGO_DATA"></div>' : '') + '<div class="brand">Biên Bản Vật Tư MN' + (S.logo ? '' : '<small>Phòng Kỹ thuật</small>') + '</div>' +
     nav.map(function (n) { return '<button data-k="' + n.k + '"><span>' + n.ic + '</span>' + n.t + '</button>'; }).join('') +
     '<div class="grow"></div><button class="pwa hidden" type="button" title="Cài app lên màn hình chính"><span>⬇</span> Cài app</button><div class="me"><b>' + esc(S.user.hoTen) + '</b><br><span>' + esc(S.user.vaiTro) + ' · ' + esc(S.user.mien) + '</span></div><button data-k="logout" title="Đăng xuất">⎋<span class="lt"> Đăng xuất</span></button></aside>' +
-    '<div><header class="topbar"><button class="back hidden" id="backBtn">‹</button><h1 id="title"></h1><button class="pwa hidden" type="button">⬇ Cài app</button><span class="who">' + esc(S.user.tenNgan || S.user.hoTen) + ' · <a id="lo" style="color:#fff">Thoát</a></span></header><main id="main"></main><div class="muted" style="text-align:center;padding:0 0 84px;font-size:11.5px">Phiên bản giao diện: 31/10/2026 · v42 (menu ngang, lib1-4)</div></div>' +
+    '<div><header class="topbar"><button class="back hidden" id="backBtn">‹</button><h1 id="title"></h1><button class="pwa hidden" type="button">⬇ Cài app</button><span class="who">' + esc(S.user.tenNgan || S.user.hoTen) + ' · <a id="lo" style="color:#fff">Thoát</a></span></header><main id="main"></main><div class="muted" style="text-align:center;padding:0 0 84px;font-size:11.5px">Phiên bản giao diện: 31/10/2026 · v43 (menu ngang, lib1-4)</div></div>' +
     '<nav class="tabbar">' + nav.filter(function (n) { return !n.desk; }).map(function (n) { return '<button data-k="' + n.k + '" class="' + (n.plus ? 'plus' : '') + '"><span class="ic">' + n.ic + '</span>' + n.t.replace('Biên bản của tôi', 'Của tôi').replace('Lập biên bản', 'Lập mới') + '</button>'; }).join('') + '</nav>';
   $$('[data-k]').forEach(function (b) { b.onclick = function () { b.dataset.k === 'logout' ? doLogout() : go(b.dataset.k); }; });
   $('#lo').onclick = doLogout;
@@ -2537,7 +2547,7 @@ function viewForm(b) {
     '<div class="card full"><h3>3. Vật tư thay thế <span class="req">*</span></h3><div class="muted" style="margin:-4px 0 8px">Gõ vài chữ của tên (vd "băng keo") hoặc mã vật tư, chọn trong danh sách là mã và đơn vị tự điền.</div>' +
       '<div id="vtList"></div><button class="btn" id="vtAdd">+ Thêm vật tư</button></div>' +
     '<div class="card"><h3>4. Đề xuất xử lý vật tư <span class="req">*</span></h3><div class="chips" id="fDX">' + S.deXuat.map(function (h) { return '<button class="chip' + (b.deXuat === h ? ' on' : '') + '" data-v="' + esc(h) + '">' + esc(h) + '</button>'; }).join('') + '</div></div>' +
-    '<div class="card"><h3>Ảnh hiện trường <span class="req">*</span></h3><div class="muted">Không in ra, chỉ lưu trên app. Lưu nháp trước khi thêm ảnh.</div>' +
+    '<div class="card"><h3>Ảnh hiện trường <span class="req">*</span></h3><div class="muted">Không in ra, chỉ lưu trên app. Bấm 📷 để chụp, hoặc 🖼 để chọn ảnh có sẵn trong điện thoại (chọn được nhiều ảnh một lần).</div>' +
       '<label>Ảnh trước</label><div class="photos" id="phTruoc"></div><label>Ảnh sau</label><div class="photos" id="phSau"></div></div>' +
     '</div>' +
     '<div class="sticky-actions"><button class="btn" id="fSave">Lưu nháp</button><button class="btn pri" id="fPrint">Save &amp; Send mail</button></div>';
@@ -2592,14 +2602,27 @@ function viewForm(b) {
   function drawPhotos() {
     [['anhTruoc', '#phTruoc'], ['anhSau', '#phSau']].forEach(function (p) {
       var box = $(p[1]);
-      box.innerHTML = (b[p[0]] || []).map(function (id) { return '<div class="ph" data-f="' + id + '">…<button class="del" title="Xóa">✕</button></div>'; }).join('') + '<button class="ph add" data-kind="' + p[0] + '">＋</button>';
+      box.innerHTML = (b[p[0]] || []).map(function (id) { return '<div class="ph" data-f="' + id + '">…<button class="del" title="Xóa">✕</button></div>'; }).join('') + '<button class="ph add" data-src="cam" title="Chụp ảnh">📷<small>Chụp</small></button><button class="ph add" data-src="gal" title="Chọn ảnh từ thư viện điện thoại">🖼<small>Thư viện</small></button>';
       $$('.ph[data-f]', box).forEach(function (el) { loadThumb(b.id, el.dataset.f, el); $('.del', el).onclick = function (e) { e.stopPropagation(); busy(true); api('removePhoto', S.token, b.id, p[0], el.dataset.f).then(function (l) { busy(false); b[p[0]] = l; drawPhotos(); }).catch(fail); }; });
-      $('.add', box).onclick = function () {
-        var go2 = b.id ? Promise.resolve() : save(false);
-        go2.then(function () { return pickImage(); }).then(loadImg).then(function (img) {
-          busy(true, 'Đang tải ảnh lên…'); return api('uploadPhoto', S.token, b.id, p[0], compress(img));
-        }).then(function (r) { busy(false); b[p[0]] = r.list; drawPhotos(); }).catch(fail);
-      };
+      $$('.add', box).forEach(function (btn) {
+        btn.onclick = function () {
+          var gal = btn.dataset.src === 'gal', go2 = b.id ? Promise.resolve() : save(false);
+          go2.then(function () { return pickImages(gal); }).then(function (files) {
+            var ok = 0, bad = 0;
+            return files.reduce(function (pr, file, i) {
+              return pr.then(function () {
+                busy(true, 'Đang tải ảnh lên… ' + (i + 1) + '/' + files.length);
+                return loadImg(file).then(function (img) { return api('uploadPhoto', S.token, b.id, p[0], compress(img)); })
+                  .then(function (r) { b[p[0]] = r.list; ok++; }, function () { bad++; });
+              });
+            }, Promise.resolve()).then(function () {
+              busy(false); drawPhotos();
+              if (bad) toast('Đã lưu ' + ok + ' ảnh, ' + bad + ' ảnh lỗi (định dạng không đọc được hoặc mất mạng). Thử lại ảnh lỗi.', 'err');
+              else toast('Đã lưu ' + ok + ' ảnh ' + (p[0] === 'anhTruoc' ? 'trước' : 'sau') + '.');
+            });
+          }).catch(fail);
+        };
+      });
     });
   }
   drawPhotos();

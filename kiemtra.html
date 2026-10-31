@@ -8,7 +8,7 @@
 <button id="go">Bấm để kiểm tra</button>
 <div id="out"></div>
 <script>
-var API_URL = 'https://script.google.com/macros/s/AKfycbyX33DMgGQnSiMYm6Mf6egaPW4Bw_ukF2T5omewJ2CXRXcpnHA2-GGv-zcLpIPNOSBY8g/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbwV4J-5M2mfHL3y2aW2GdBss1sCftq-0Pcs1hKJ3UmPDw53GEMVEHnPeAn0ezMJzho6eQ/exec';
 var out = document.getElementById('out');
 function row(name, ok, detail) { var d = document.createElement('div'); d.className = 'r'; d.innerHTML = '<span class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✔' : '✘') + '</span> ' + name + (detail ? '<br><small></small>' : ''); if (detail) d.querySelector('small').textContent = detail; out.appendChild(d); }
 document.getElementById('go').onclick = function () {
