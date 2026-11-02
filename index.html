@@ -27,7 +27,7 @@
   .topbar .who { font-size: 13px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 4px; }
   .topbar .pwa { background: transparent; border: 2px solid var(--ink); color: var(--ink); border-radius: 0; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .side { display: none; }
-  main { padding: 0 0 96px; max-width: 1180px; margin: 0 auto; }
+  main { padding: 16px 16px 96px; max-width: 1180px; margin: 0 auto; }
   .tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; background: var(--n200); border-top: 2px solid var(--ink); display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
   .tabbar button { position: relative; background: none; border: 0; padding: 0 10px; min-height: 58px; font-size: 11px; font-weight: 600; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; text-align: left; }
   .tabbar button .ic { font-size: 22px; line-height: 1; }
@@ -118,6 +118,7 @@
   .msg.info { background: var(--n200); color: var(--ink); }
 
   /* danh sách: thẻ trên điện thoại, bảng trên máy tính */
+  .list { margin: 0 -16px; }
   .list .item { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 16px; margin-bottom: 0; cursor: pointer; }
   .list .item .t { font-weight: 600; font-size: 15px; }
   .list .item .l2 { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; align-items: center; }
@@ -172,7 +173,10 @@
   .overlay img.full { max-width: 100%; max-height: 80vh; display: block; margin: auto; filter: grayscale(1); }
   .spinner { width: 34px; height: 34px; border: 3px solid #f3f2f2; border-top-color: transparent; border-radius: 50%; animation: sp 0.8s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
-  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; margin: 0; border-bottom: 2px solid var(--ink); }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; margin: -16px -16px 16px; border-bottom: 2px solid var(--ink); }
+  .fbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 4px; padding: 0 16px 12px; }
+  .fbar .chip { flex: none; opacity: 1; }
+  .fbar .chip small { opacity: .75; font-weight: 400; margin-left: 4px; }
   .stat { background: var(--card); border: 0; border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); border-radius: 0; padding: 12px 16px; min-height: 104px; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; }
   .stat:nth-child(2n) { border-right: 0; }
   .stat:nth-last-child(-n+2) { border-bottom: 0; }
@@ -284,7 +288,7 @@
   @media (min-width: 900px) { .stats.s4 { grid-template-columns: repeat(4, 1fr); } }
   .login { max-width: 380px; margin: 0 auto; background: var(--pri); color: #f3f2f2; padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 24px; border: 0; border-radius: 0; }
   .login .logobox { background: transparent; border-radius: 0; padding: 0; margin: 0 0 -6px -6px; display: flex; align-items: flex-end; justify-content: space-between; }
-  .login .logobox img { display: block; max-height: 40px; filter: grayscale(1) brightness(10); }
+  .login .logobox img { display: block; max-height: 40px; }
   .login .logobox .v { font-size: 12px; color: #f3f2f2; opacity: .85; }
   .login .logo { text-align: left; font-weight: 800; font-size: 40px; line-height: .95; letter-spacing: -.02em; color: #f3f2f2; margin: 0; font-family: "Archivo", sans-serif; }
   .login .desc { font-size: 14px; line-height: 1.4; max-width: 280px; color: #f3f2f2; opacity: .92; }
@@ -1526,7 +1530,12 @@ function statusClass(b) {
 }
 function badge(b) {
   var late = b.trangThai === (S.status || {}).DA_IN && daysSince(b.ngayIn) >= S.soNgayCanhBao;
-  return '<span class="badge ' + statusClass(b) + '">' + esc(b.trangThai) + (late ? ' · ' + daysSince(b.ngayIn) + ' ngày' : '') + '</span>';
+  var st = S.status || {}, t = b.trangThai;
+  if (late) t = 'Quá hạn · ' + daysSince(b.ngayIn) + ' ngày';
+  else if (t === st.DA_IN) t = 'Đã in';
+  else if (t === st.DA_UPLOAD) t = 'Chờ duyệt';
+  else if ([st.XUAT_KHO, st.MUA_MOI, st.BAO_HANH].indexOf(t) >= 0) t = 'Đã duyệt · ' + t;
+  return '<span class="badge ' + statusClass(b) + '">' + esc(t) + '</span>';
 }
 
 /* tìm không dấu; "keo" và "dính" coi như nhau */
@@ -1649,7 +1658,7 @@ function start() {
 function renderLogin(err) {
   var arrow = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   $('#app').innerHTML = '<div class="login">' +
-    '<div class="logobox"><img src="' + esc(S.logo || LOGO_DATA) + '" alt="WinCommerce" onerror="this.onerror=null;this.src=LOGO_DATA"><span class="v">v47</span></div>' +
+    '<div class="logobox"><img src="wincommerce-white.png" alt="WinCommerce"><span class="v">v47</span></div>' +
     '<h1 class="logo">Biên bản<br>vật tư<br>Miền Nam</h1>' +
     '<p class="desc">Lập biên bản, theo dõi duyệt và tra tồn kho vật tư ngay trên điện thoại.</p></div>' +
     '<div class="login-form" style="max-width:380px;margin:0 auto">' +
@@ -1753,10 +1762,10 @@ function viewList(scope, filter) {
     var html = '';
     if (scope === 'team') {
       html += '<div class="stats">' + FILTERS.team.slice(0, 4).map(function (x, i) {
-        return '<div class="stat" data-f="' + esc(x) + '"><div class="n" style="color:' + (i === 0 ? 'var(--pri)' : i === 1 ? 'var(--bad)' : 'inherit') + '">' + counts[i] + '</div><div class="k">' + esc(x) + '</div></div>';
+        return '<div class="stat' + (i === 1 && counts[i] > 0 ? ' warn' : '') + '" data-f="' + esc(x) + '"><div class="n">' + counts[i] + '</div><div class="k">' + esc(x) + '</div></div>';
       }).join('') + '</div>';
     }
-    html += '<div class="chips" style="margin-bottom:12px">' + FILTERS[scope].map(function (x, i) { return '<button class="chip' + (x === f ? ' on' : '') + '" data-f="' + esc(x) + '">' + esc(x) + ' (' + counts[i] + ')</button>'; }).join('') + '</div>';
+    html += '<div class="fbar">' + FILTERS[scope].map(function (x, i) { return '<button class="chip' + (x === f ? ' on' : '') + '" data-f="' + esc(x) + '">' + esc(x) + '<small>' + counts[i] + '</small></button>'; }).join('') + '</div>';
     if (!shown.length) html += '<div class="empty">Không có biên bản nào.' + (scope === 'mine' ? '<br><br><button class="btn pri" id="newBtn">+ Lập biên bản</button>' : '') + '</div>';
     else {
       html += '<div class="list">' + shown.map(function (b) {
