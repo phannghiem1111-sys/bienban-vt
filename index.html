@@ -4,7 +4,7 @@
 <base target="_top"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="theme-color" content="#d0121b"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="BB Vật Tư">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Biên Bản Vật Tư MN</title>
+<title>Biên Bản Vật Tư MB</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
   :root {
@@ -1661,7 +1661,7 @@ function renderLogin(err) {
   var arrow = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   $('#app').innerHTML = '<div class="login">' +
     '<div class="logobox"><img src="wincommerce-white.png" alt="WinCommerce"><span class="v">v47</span></div>' +
-    '<h1 class="logo">Biên bản<br>vật tư<br>Miền Nam</h1>' +
+    '<h1 class="logo">Biên bản<br>vật tư<br>Miền Bắc</h1>' +
     '<p class="desc">Lập biên bản, theo dõi duyệt và tra tồn kho vật tư ngay trên điện thoại.</p></div>' +
     '<div class="login-form" style="max-width:380px;margin:0 auto">' +
     (err ? '<div class="msg err">' + esc(err) + '</div>' : '') +
@@ -1697,7 +1697,7 @@ function tabItems(nav) {
 function shell() {
   var nav = navItems();
   $('#app').innerHTML =
-    '<aside class="side">' + (S.logo ? '<div class="logobox"><img src="' + esc(S.logo) + '" alt="WinCommerce" onerror="this.onerror=null;this.src=LOGO_DATA"></div>' : '') + '<div class="brand">Biên Bản Vật Tư MN' + (S.logo ? '' : '<small>Phòng Kỹ thuật</small>') + '</div>' +
+    '<aside class="side">' + (S.logo ? '<div class="logobox"><img src="' + esc(S.logo) + '" alt="WinCommerce" onerror="this.onerror=null;this.src=LOGO_DATA"></div>' : '') + '<div class="brand">Biên Bản Vật Tư MB' + (S.logo ? '' : '<small>Phòng Kỹ thuật</small>') + '</div>' +
     nav.map(function (n) { return '<button data-k="' + n.k + '"><span>' + n.ic + '</span>' + n.t + '</button>'; }).join('') +
     '<div class="grow"></div><button class="pwa hidden" type="button" title="Cài app lên màn hình chính"><span>⬇</span> Cài app</button><div class="me"><b>' + esc(S.user.hoTen) + '</b><br><span>' + esc(S.user.vaiTro) + ' · ' + esc(S.user.mien) + '</span></div><button data-k="logout" title="Đăng xuất">⎋<span class="lt"> Đăng xuất</span></button></aside>' +
     '<div><header class="topbar"><button class="back hidden" id="backBtn">‹</button><h1 id="title"></h1><button class="pwa hidden" type="button">⬇ Cài app</button><span class="who">' + esc(S.user.tenNgan || S.user.hoTen) + ' · <a id="lo" style="color:var(--pri);cursor:pointer;font-weight:800">Thoát</a></span></header><main id="main"></main><div class="muted" style="text-align:center;padding:0 0 84px;font-size:11.5px">Phiên bản giao diện: 3/11/2026 · v48 (menu ngang, lib1-4)</div></div>' +
