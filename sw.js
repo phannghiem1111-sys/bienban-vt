@@ -1,5 +1,5 @@
 /* Service worker tối thiểu: giữ khung ứng dụng để mở nhanh; dữ liệu luôn lấy mới từ máy chủ (POST/Apps Script không bao giờ vào cache). */
-var CACHE = 'bbvt-v35';
+var CACHE = 'bbvt-v49';
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(['./', 'manifest.webmanifest']).catch(function () {}); }).then(function () { return self.skipWaiting(); }));
 });
