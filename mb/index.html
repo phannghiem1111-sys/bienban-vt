@@ -1480,7 +1480,7 @@ var LOGO_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAggAAABTCAMAAADN9
 var S = { token: null, user: null, vatTu: [], stores: [], view: 'mine', stack: [], cache: {}, logo: '' };
 var LG = '';
 S.logo = (LG && LG.indexOf('<') < 0) ? LG : LOGO_DATA; // xem file tĩnh hoặc Code.gs cũ vẫn ra logo nhúng sẵn
-var API_URL = ''; // DÁN LINK /exec CỦA APPS SCRIPT MIỀN BẮC VÀO ĐÂY (riêng, không dùng link Miền Nam); // chạy ở github.io: bản dựng điền link /exec của Apps Script vào đây; trong Apps Script để trống
+var API_URL = 'https://script.google.com/macros/s/AKfycbwN7QTeq-PTYBV32zmxjuBRDL7qsLMP-2SmYBzaEGhsKB6yT2DJjK1J5MWJ-lj1CVgB/exec'; // DÁN LINK /exec CỦA APPS SCRIPT MIỀN BẮC VÀO ĐÂY (riêng, không dùng link Miền Nam); // chạy ở github.io: bản dựng điền link /exec của Apps Script vào đây; trong Apps Script để trống
 function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (resolve, reject) {
