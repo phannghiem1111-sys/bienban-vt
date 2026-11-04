@@ -1637,7 +1637,7 @@ function renderLogin(err) {
 function navItems() {
   var a = [{ k: 'mine', ic: '📄', t: 'Biên bản của tôi' }, { k: 'new', ic: '+', t: 'Lập biên bản', plus: true }, { k: 'scan', ic: '⌗', t: 'Quét QR' }, { k: 'ton', ic: '📦', t: 'Tra tồn kho' }];
   if (S.user.laDuyet) a.unshift({ k: 'team', ic: '✔', t: 'Duyệt' });
-  if (S.user.vaiTro === 'Đội trưởng' || S.user.laQuanLy) a.push({ k: 'dc', ic: '⇄', t: 'Điều phối' });
+  a.push({ k: 'dc', ic: '⇄', t: 'Điều phối' });
   if (S.user.laQuanLy) { a.unshift({ k: 'dash', ic: '📊', t: 'Tổng quan' }); a.push({ k: 'alert', ic: '🔔', t: 'Cảnh báo', desk: true }); }
   return a;
 }
@@ -2487,17 +2487,60 @@ function viewDC() {
   setTitle('Điều phối vật tư', false);
   var m = $('#main'); m.innerHTML = '<div class="empty">Đang tải…</div>';
   var admin = S.user.vaiTro !== 'Đội trưởng';
+  var canDC = S.user.vaiTro === 'Đội trưởng' || S.user.laQuanLy;
   function nm(p) { return p.hoTen || p.ten; }
-  Promise.all([api('xuatTon', S.token), api('dieuChuyenLichSu', S.token).catch(function () { return null; })]).then(function (res) {
-    var d = res[0], hist = res[1], ppl = d.nguoi.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), 'vi'); }), qty = {}, A = '', B = '';
+  /* Danh sách phiếu đang chờ xác nhận: người nhận bấm xác nhận (lúc đó mới trừ/cộng tồn); người lập hoặc quản lý hủy được */
+  function drawCho(box, cho) {
+    if (!cho || !cho.length) { box.innerHTML = '<div class="muted">Không có phiếu nào đang chờ xác nhận.</div>'; return; }
+    box.innerHTML = cho.map(function (x, i) {
+      var huyDuoc = S.user.laQuanLy || (canDC && x.vai === 'tao') || (canDC && x.by === S.user.hoTen);
+      return '<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + esc(x.tu) + ' → ' + esc(x.den) + '</b><span class="badge s-in">Chờ xác nhận</span></div>' +
+        '<div class="muted" style="font-size:12.5px;margin:2px 0 6px">' + esc(x.t.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1')) + ' · ' + esc(x.id) + ' · Người điều phối: ' + esc(x.by) + '</div>' +
+        (x.ghiChu ? '<div style="margin-bottom:6px"><span class="muted">Nội dung điều chuyển:</span> ' + esc(x.ghiChu) + '</div>' : '') +
+        '<div>' + x.l.map(function (r) { return esc(r[1]) + ' <b>×' + num(r[3]) + '</b> ' + esc(r[2]); }).join('<br>') + '</div>' +
+        '<div class="row" style="margin-top:10px">' + (x.vai === 'nhan' ? '<button class="btn ok" data-xn="' + i + '">Xác nhận đã nhận</button>' : '<span class="muted">Đang chờ người nhận xác nhận.</span>') +
+        (huyDuoc ? '<button class="btn bad" data-huy="' + i + '">Hủy phiếu</button>' : '') + '</div></div>';
+    }).join('');
+    $$('[data-xn]', box).forEach(function (b) {
+      b.onclick = function () {
+        var x = cho[Number(b.dataset.xn)];
+        confirmBox('Xác nhận đã nhận vật tư', 'Bạn đã nhận ' + x.l.length + ' loại vật tư từ ' + x.tu + '? Sau khi xác nhận, tồn kho sẽ trừ ở ' + x.tu + ' và cộng cho ' + x.den + '.', 'Xác nhận', function () {
+          busy(true, 'Đang xác nhận…');
+          api('xacNhanDieuChuyen', S.token, x.id).then(function () { busy(false); toast('Đã xác nhận, tồn kho đã cập nhật.'); viewDC(); })
+            .catch(function (e) { busy(false); var t = (e && e.message) || String(e); toast(/apply|not a function|undefined/i.test(t) ? 'Máy chủ chưa có chức năng này. Cần dán Code.gs bản mới rồi Deploy phiên bản mới.' : t, 'err'); });
+        });
+      };
+    });
+    $$('[data-huy]', box).forEach(function (b) {
+      b.onclick = function () {
+        var x = cho[Number(b.dataset.huy)];
+        confirmBox('Hủy phiếu điều chuyển', 'Hủy phiếu ' + x.id + ' (' + x.tu + ' → ' + x.den + ')? Tồn kho không thay đổi.', 'Hủy phiếu', function () {
+          busy(true, 'Đang hủy…');
+          api('huyDieuChuyen', S.token, x.id).then(function () { busy(false); toast('Đã hủy phiếu.'); viewDC(); }).catch(fail);
+        });
+      };
+    });
+  }
+  if (!canDC) {
+    api('dieuChuyenCho', S.token).then(function (cho) {
+      m.innerHTML = '<div class="msg info" style="margin-bottom:10px">Phiếu điều chuyển vật tư chuyển cho bạn. Chỉ khi bạn bấm <b>Xác nhận đã nhận</b>, tồn kho mới được cập nhật.</div><div id="dcCho"></div>';
+      drawCho($('#dcCho'), cho);
+    }).catch(function (e) { m.innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+    return;
+  }
+  Promise.all([api('xuatTon', S.token), api('dieuChuyenLichSu', S.token).catch(function () { return null; }), api('dieuChuyenCho', S.token).catch(function () { return []; })]).then(function (res) {
+    var d = res[0], hist = res[1], choList = res[2], ppl = d.nguoi.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), 'vi'); }), qty = {}, A = '', B = '';
     if (!ppl.length) { m.innerHTML = '<div class="empty">Chưa có nhân viên nào trong phạm vi của bạn.</div>'; return; }
     ppl.forEach(function (p) { p.items = p.items.filter(function (it) { return it[3] > 0; }); }); // chỉ vật tư đang còn tồn dương mới chuyển được
     var optA = '<option value="">Chuyển từ nhân viên…</option>' + ppl.filter(function (p) { return p.items.length; }).map(function (p) { return '<option value="' + esc(p.ten) + '">' + esc(nm(p)) + ' (' + p.items.length + ' loại)</option>'; }).join('');
-    m.innerHTML = '<div class="dtabs" style="margin-top:0"><button type="button" class="btn on" id="dcT1">Chuyển giữa nhân viên</button><button type="button" class="btn" id="dcT2">Thu hồi từ cửa hàng đóng cửa</button></div><div id="dcMain"><div class="msg info" style="margin-bottom:10px">' + (admin ? 'Quản trị: điều chuyển giữa mọi nhân viên.' : 'Đội trưởng: điều chuyển giữa các nhân viên trong đội của bạn.') + ' Số lượng chuyển sẽ trừ ở người đi và cộng cho người nhận trong sheet Tồn kho.</div>' +
+    m.innerHTML = '<div class="dtabs" style="margin-top:0"><button type="button" class="btn on" id="dcT1">Chuyển giữa nhân viên</button><button type="button" class="btn" id="dcT2">Thu hồi từ cửa hàng đóng cửa</button></div><div id="dcMain"><div class="msg info" style="margin-bottom:10px">' + (admin ? 'Quản trị: điều chuyển giữa mọi nhân viên.' : 'Đội trưởng: điều chuyển giữa các nhân viên trong đội của bạn.') + ' Tạo phiếu xong, <b>người nhận phải bấm xác nhận</b> thì phiếu mới Hoàn thành và tồn kho mới được trừ/cộng.</div>' +
+      '<h3 class="dh">Phiếu đang chờ xác nhận</h3><div id="dcCho" style="margin-bottom:14px"></div>' +
       '<div class="card dpick"><div class="dcsel"><select id="dcA">' + optA + '</select><span class="dcar">→</span><select id="dcB"></select></div></div>' +
       '<div id="dcBody"></div>' +
-      '<div class="dcbar hidden" id="dcBar"><span id="dcSum"></span><button class="btn pri" id="dcGo">Điều chuyển</button></div>' +
+      '<div class="card"><label for="dcNote" style="margin-top:0">Nội dung điều chuyển</label><textarea id="dcNote" rows="2" maxlength="500" placeholder="VD: Chuyển vật tư hỗ trợ cửa hàng khai trương, theo yêu cầu của đội trưởng…"></textarea></div>' +
+      '<div class="dcbar hidden" id="dcBar"><span id="dcSum"></span><button class="btn pri" id="dcGo">Tạo phiếu điều chuyển</button></div>' +
       '<h3 class="dh">Lịch sử điều chuyển gần đây</h3><div id="dcHist"></div></div><div id="dcTH" class="hidden"></div>';
+    drawCho($('#dcCho'), choList);
     $('#dcT1').onclick = function () { $('#dcMain').classList.remove('hidden'); $('#dcTH').classList.add('hidden'); $('#dcT1').classList.add('on'); $('#dcT2').classList.remove('on'); summary(); };
     $('#dcT2').onclick = function () { $('#dcMain').classList.add('hidden'); $('#dcTH').classList.remove('hidden'); $('#dcT2').classList.add('on'); $('#dcT1').classList.remove('on'); $('#dcBar').classList.add('hidden'); };
     thuHoiUI($('#dcTH'), ppl);
@@ -2540,10 +2583,10 @@ function viewDC() {
     function drawHist() {
       if (hist === null) { $('#dcHist').innerHTML = '<div class="muted">Chưa tải được lịch sử (cần dán Code.gs bản mới).</div>'; return; }
       var g = {}, order = [];
-      hist.forEach(function (r) { var k = r[1]; if (!g[k]) { g[k] = { t: r[0], tu: r[2], den: r[3], by: r[7], l: [] }; order.push(k); } g[k].l.push(r); });
-      $('#dcHist').innerHTML = order.length ? '<div class="dwrap"><table class="dtbl"><thead><tr><th>Thời gian</th><th>Từ → Đến</th><th>Vật tư</th><th>Người điều phối</th></tr></thead><tbody>' + order.slice(0, 30).map(function (k) {
-        var x = g[k];
-        return '<tr><td style="white-space:nowrap">' + esc(x.t.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1')) + '</td><td>' + esc(who(x.tu)) + ' → ' + esc(who(x.den)) + '</td><td>' + x.l.map(function (r) { return esc(r[4]) + ' <b>×' + num(r[6]) + '</b> ' + esc(r[5]); }).join('<br>') + '</td><td>' + esc(x.by) + '</td></tr>';
+      hist.forEach(function (r) { var k = r[1]; if (!g[k]) { g[k] = { t: r[0], tu: r[2], den: r[3], by: r[7], gc: r[8] || '', st: r[9] || 'Hoàn thành', l: [] }; order.push(k); } g[k].l.push(r); });
+      $('#dcHist').innerHTML = order.length ? '<div class="dwrap"><table class="dtbl"><thead><tr><th>Thời gian</th><th>Từ → Đến</th><th>Vật tư</th><th>Nội dung</th><th>Người điều phối</th><th>Trạng thái</th></tr></thead><tbody>' + order.slice(0, 30).map(function (k) {
+        var x = g[k], cls = x.st === 'Hoàn thành' ? 's-ok' : x.st === 'Đã hủy' ? '' : 's-in';
+        return '<tr><td style="white-space:nowrap">' + esc(x.t.replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1')) + '</td><td>' + esc(who(x.tu)) + ' → ' + esc(who(x.den)) + '</td><td>' + x.l.map(function (r) { return esc(r[4]) + ' <b>×' + num(r[6]) + '</b> ' + esc(r[5]); }).join('<br>') + '</td><td>' + esc(x.gc) + '</td><td>' + esc(x.by) + '</td><td><span class="badge ' + cls + '">' + esc(x.st) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>' : '<div class="muted">Chưa có lần điều chuyển nào.</div>';
     }
     $('#dcA').onchange = function () { A = this.value; qty = {}; drawB(); drawBody(); };
@@ -2551,9 +2594,10 @@ function viewDC() {
     $('#dcGo').onclick = function () {
       var dong = Object.keys(qty).filter(function (k) { return qty[k] > 0; }).map(function (k) { return { ma: k, sl: qty[k] }; });
       if (!A || !B || !dong.length) return;
-      confirmBox('Điều chuyển vật tư', 'Chuyển ' + dong.length + ' loại vật tư từ ' + who(A) + ' sang ' + who(B) + '? Sheet Tồn kho sẽ cập nhật ngay.', 'Điều chuyển', function () {
-        busy(true, 'Đang điều chuyển…');
-        api('dieuChuyen', S.token, A, B, dong).then(function (r) { busy(false); toast('Đã điều chuyển ' + r.soLoai + ' loại (' + r.id + ')'); viewDC(); })
+      var note = $('#dcNote').value.trim();
+      confirmBox('Tạo phiếu điều chuyển', 'Tạo phiếu chuyển ' + dong.length + ' loại vật tư từ ' + who(A) + ' sang ' + who(B) + '? Tồn kho chỉ thay đổi sau khi người nhận xác nhận.', 'Tạo phiếu', function () {
+        busy(true, 'Đang tạo phiếu…');
+        api('dieuChuyen', S.token, A, B, dong, note).then(function (r) { busy(false); toast('Đã tạo phiếu ' + r.id + ', chờ người nhận xác nhận.'); viewDC(); })
           .catch(function (e) { busy(false); var t = (e && e.message) || String(e); toast(/apply|not a function|undefined/i.test(t) ? 'Máy chủ chưa có chức năng này. Cần dán Code.gs bản mới rồi Deploy phiên bản mới.' : t, 'err'); });
       });
     };
