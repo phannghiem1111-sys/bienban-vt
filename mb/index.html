@@ -246,6 +246,13 @@
   .dwrap input.dcq { width: 96px; min-height: 36px; padding: 4px 8px; text-align: right; }
   .dcbar { position: sticky; bottom: 68px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 12px 0; box-shadow: 0 4px 16px rgba(0,0,0,.12); font-size: 14px; }
   .dcbar .btn:disabled { opacity: .4; }
+  .bdg { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: #fff; color: var(--pri); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
+  .tabbar button { position: relative; }
+  .tabbar .bdg { position: absolute; top: 2px; right: 14%; margin: 0; background: var(--pri); color: #fff; }
+  .dcx .dcxh { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .dcx .chip2 { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #fff4d6; color: #8a5a00; }
+  .dcx .chip2.ok { background: #e5f4e4; color: #1e7b3c; } .dcx .chip2.no { background: #f1f1f1; color: #666; }
+  .dcx .stp { margin: 8px 0; font-size: 13.5px; } .dcx .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   @media (min-width: 900px) { .dcbar { bottom: 12px; } }
   @media (max-width: 640px) { .dcsel { grid-template-columns: 1fr; } .dcar { display: none; } }
   .xcl { cursor: pointer; color: var(--pri); font-weight: 600; border-bottom: 1px dotted var(--pri); white-space: nowrap; }
@@ -1614,7 +1621,7 @@ function start() {
   api('bootstrap', S.token).then(function (d) {
     busy(false);
     S.user = d.user; S.logo = d.logo || S.logo; S.vatTu = d.vatTu; S.stores = d.stores; S.hangMuc = d.hangMuc; S.deXuat = d.deXuat; S.status = d.status; S.soNgayCanhBao = d.soNgayCanhBao;
-    shell(); go(S.user.laQuanLy ? 'dash' : S.user.laDuyet ? 'team' : 'mine');
+    shell(); go(S.user.laQuanLy ? 'dash' : S.user.laDuyet ? 'team' : 'mine'); dcBadge();
   }).catch(function (e) { busy(false); renderLogin(e.message); });
 }
 
@@ -1635,7 +1642,7 @@ function renderLogin(err) {
 
 /* khung chung: menu trái (máy tính) + tab dưới (điện thoại) */
 function navItems() {
-  var a = [{ k: 'mine', ic: '📄', t: 'Biên bản của tôi' }, { k: 'new', ic: '+', t: 'Lập biên bản', plus: true }, { k: 'scan', ic: '⌗', t: 'Quét QR' }, { k: 'ton', ic: '📦', t: 'Tra tồn kho' }];
+  var a = [{ k: 'mine', ic: '📄', t: 'Biên bản của tôi' }, { k: 'new', ic: '+', t: 'Lập biên bản', plus: true }, { k: 'scan', ic: '⌗', t: 'Quét QR' }, { k: 'ton', ic: '📦', t: 'Tra tồn kho' }, { k: 'xn', ic: '✅', t: 'Xác nhận chuyển' }];
   if (S.user.laDuyet) a.unshift({ k: 'team', ic: '✔', t: 'Duyệt' });
   if (S.user.vaiTro === 'Đội trưởng' || S.user.laQuanLy) a.push({ k: 'dc', ic: '⇄', t: 'Điều phối' });
   if (S.user.laQuanLy) { a.unshift({ k: 'dash', ic: '📊', t: 'Tổng quan' }); a.push({ k: 'alert', ic: '🔔', t: 'Cảnh báo', desk: true }); }
@@ -1647,8 +1654,8 @@ function shell() {
     '<aside class="side">' + (S.logo ? '<div class="logobox"><img src="' + esc(S.logo) + '" alt="WinCommerce" onerror="this.onerror=null;this.src=LOGO_DATA"></div>' : '') + '<div class="brand">Biên Bản Vật Tư MB' + (S.logo ? '' : '<small>Phòng Kỹ thuật</small>') + '</div>' +
     nav.map(function (n) { return '<button data-k="' + n.k + '"><span>' + n.ic + '</span>' + n.t + '</button>'; }).join('') +
     '<div class="grow"></div><button class="pwa hidden" type="button" title="Cài app lên màn hình chính"><span>⬇</span> Cài app</button><div class="me"><b>' + esc(S.user.hoTen) + '</b><br><span>' + esc(S.user.vaiTro) + ' · ' + esc(S.user.mien) + '</span></div><button data-k="logout" title="Đăng xuất">⎋<span class="lt"> Đăng xuất</span></button></aside>' +
-    '<div><header class="topbar"><button class="back hidden" id="backBtn">‹</button><h1 id="title"></h1><button class="pwa hidden" type="button">⬇ Cài app</button><span class="who">' + esc(S.user.tenNgan || S.user.hoTen) + ' · <a id="lo" style="color:#fff">Thoát</a></span></header><main id="main"></main><div class="muted" style="text-align:center;padding:0 0 84px;font-size:11.5px">Phiên bản giao diện: 3/11/2026 · v49 (menu ngang, lib1-4)</div></div>' +
-    '<nav class="tabbar">' + nav.filter(function (n) { return !n.desk; }).map(function (n) { return '<button data-k="' + n.k + '" class="' + (n.plus ? 'plus' : '') + '"><span class="ic">' + n.ic + '</span>' + n.t.replace('Biên bản của tôi', 'Của tôi').replace('Lập biên bản', 'Lập mới') + '</button>'; }).join('') + '</nav>';
+    '<div><header class="topbar"><button class="back hidden" id="backBtn">‹</button><h1 id="title"></h1><button class="pwa hidden" type="button">⬇ Cài app</button><span class="who">' + esc(S.user.tenNgan || S.user.hoTen) + ' · <a id="lo" style="color:#fff">Thoát</a></span></header><main id="main"></main><div class="muted" style="text-align:center;padding:0 0 84px;font-size:11.5px">Phiên bản giao diện: 3/11/2026 · v50 (menu ngang, lib1-4)</div></div>' +
+    '<nav class="tabbar">' + nav.filter(function (n) { return !n.desk; }).map(function (n) { return '<button data-k="' + n.k + '" class="' + (n.plus ? 'plus' : '') + '"><span class="ic">' + n.ic + '</span>' + n.t.replace('Xác nhận chuyển', 'Xác nhận').replace('Biên bản của tôi', 'Của tôi').replace('Lập biên bản', 'Lập mới') + '</button>'; }).join('') + '</nav>';
   $$('[data-k]').forEach(function (b) { b.onclick = function () { b.dataset.k === 'logout' ? doLogout() : go(b.dataset.k); }; });
   $('#lo').onclick = doLogout;
   $('#backBtn').onclick = back;
@@ -1687,6 +1694,7 @@ function go(k, arg) {
   if (k === 'ton') return viewTon();
   if (k === 'alert') return viewAlert();
   if (k === 'dc') return viewDC();
+  if (k === 'xn') return viewXN();
 }
 function push(fn) { S.stack.push(fn); }
 function back() { var f = S.stack.pop(); if (f) f(); else go(S.view); }
@@ -2493,10 +2501,10 @@ function viewDC() {
     if (!ppl.length) { m.innerHTML = '<div class="empty">Chưa có nhân viên nào trong phạm vi của bạn.</div>'; return; }
     ppl.forEach(function (p) { p.items = p.items.filter(function (it) { return it[3] > 0; }); }); // chỉ vật tư đang còn tồn dương mới chuyển được
     var optA = '<option value="">Chuyển từ nhân viên…</option>' + ppl.filter(function (p) { return p.items.length; }).map(function (p) { return '<option value="' + esc(p.ten) + '">' + esc(nm(p)) + ' (' + p.items.length + ' loại)</option>'; }).join('');
-    m.innerHTML = '<div class="dtabs" style="margin-top:0"><button type="button" class="btn on" id="dcT1">Chuyển giữa nhân viên</button><button type="button" class="btn" id="dcT2">Thu hồi từ cửa hàng đóng cửa</button></div><div id="dcMain"><div class="msg info" style="margin-bottom:10px">' + (admin ? 'Quản trị: điều chuyển giữa mọi nhân viên.' : 'Đội trưởng: điều chuyển giữa các nhân viên trong đội của bạn.') + ' Số lượng chuyển sẽ trừ ở người đi và cộng cho người nhận trong sheet Tồn kho.</div>' +
+    m.innerHTML = '<div class="dtabs" style="margin-top:0"><button type="button" class="btn on" id="dcT1">Chuyển giữa nhân viên</button><button type="button" class="btn" id="dcT2">Thu hồi từ cửa hàng đóng cửa</button></div><div id="dcMain"><div class="msg info" style="margin-bottom:10px">' + (admin ? 'Quản trị: điều chuyển giữa mọi nhân viên.' : 'Đội trưởng: điều chuyển giữa các nhân viên trong đội của bạn.') + ' Bạn tạo yêu cầu; người chuyển đi và người nhận đều phải xác nhận. Sau khi cả hai xác nhận, tồn kho mới trừ ở người đi và cộng cho người nhận.</div>' +
       '<div class="card dpick"><div class="dcsel"><select id="dcA">' + optA + '</select><span class="dcar">→</span><select id="dcB"></select></div></div>' +
       '<div id="dcBody"></div>' +
-      '<div class="dcbar hidden" id="dcBar"><span id="dcSum"></span><button class="btn pri" id="dcGo">Điều chuyển</button></div>' +
+      '<div class="dcbar hidden" id="dcBar"><span id="dcSum"></span><button class="btn pri" id="dcGo">Gửi yêu cầu điều chuyển</button></div>' +
       '<h3 class="dh">Lịch sử điều chuyển gần đây</h3><div id="dcHist"></div></div><div id="dcTH" class="hidden"></div>';
     $('#dcT1').onclick = function () { $('#dcMain').classList.remove('hidden'); $('#dcTH').classList.add('hidden'); $('#dcT1').classList.add('on'); $('#dcT2').classList.remove('on'); summary(); };
     $('#dcT2').onclick = function () { $('#dcMain').classList.add('hidden'); $('#dcTH').classList.remove('hidden'); $('#dcT2').classList.add('on'); $('#dcT1').classList.remove('on'); $('#dcBar').classList.add('hidden'); };
@@ -2551,14 +2559,50 @@ function viewDC() {
     $('#dcGo').onclick = function () {
       var dong = Object.keys(qty).filter(function (k) { return qty[k] > 0; }).map(function (k) { return { ma: k, sl: qty[k] }; });
       if (!A || !B || !dong.length) return;
-      confirmBox('Điều chuyển vật tư', 'Chuyển ' + dong.length + ' loại vật tư từ ' + who(A) + ' sang ' + who(B) + '? Sheet Tồn kho sẽ cập nhật ngay.', 'Điều chuyển', function () {
-        busy(true, 'Đang điều chuyển…');
-        api('dieuChuyen', S.token, A, B, dong).then(function (r) { busy(false); toast('Đã điều chuyển ' + r.soLoai + ' loại (' + r.id + ')'); viewDC(); })
+      confirmBox('Gửi yêu cầu điều chuyển', 'Gửi yêu cầu chuyển ' + dong.length + ' loại vật tư từ ' + who(A) + ' sang ' + who(B) + '? Tồn kho chưa đổi: ' + who(A) + ' và ' + who(B) + ' phải cùng xác nhận thì mới trừ tồn.', 'Gửi yêu cầu', function () {
+        busy(true, 'Đang gửi yêu cầu…');
+        api('dieuChuyen', S.token, A, B, dong).then(function (r) { busy(false); toast('Đã gửi yêu cầu ' + r.id + '. Chờ ' + who(A) + ' và ' + who(B) + ' xác nhận.'); go('xn'); dcBadge(); })
           .catch(function (e) { busy(false); var t = (e && e.message) || String(e); toast(/apply|not a function|undefined/i.test(t) ? 'Máy chủ chưa có chức năng này. Cần dán Code.gs bản mới rồi Deploy phiên bản mới.' : t, 'err'); });
       });
     };
     drawB(); drawBody(); drawHist();
   }).catch(function (e) { m.innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+}
+
+/* ======================= XÁC NHẬN ĐIỀU CHUYỂN (người chuyển đi, người nhận, người lập) ======================= */
+function dcBadge() {
+  api('dcDanhSach', S.token).then(function (l) {
+    var n = (l || []).filter(function (x) { return x.canA || x.canB; }).length;
+    $$('[data-k="xn"]').forEach(function (b) { var o = b.querySelector('.bdg'); if (o) o.remove(); if (n) b.insertAdjacentHTML('beforeend', '<span class="bdg">' + n + '</span>'); });
+    if (n && !S.dcNhac) { S.dcNhac = 1; toast('Có ' + n + ' yêu cầu điều chuyển vật tư chờ bạn xác nhận (mục "Xác nhận chuyển").'); }
+  }).catch(function () {});
+}
+function viewXN() {
+  setTitle('Xác nhận chuyển vật tư', false);
+  var m = $('#main'); m.innerHTML = '<div class="empty">Đang tải…</div>';
+  function ngay(t) { return esc(String(t || '').replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1')); }
+  function loi(e) { var t = (e && e.message) || String(e); return /apply|not a function|undefined/i.test(t) ? 'Máy chủ chưa có chức năng này. Cần dán Code.gs bản mới rồi Deploy phiên bản mới.' : t; }
+  api('dcDanhSach', S.token).then(function (l) {
+    l = l || [];
+    if (!l.length) { m.innerHTML = '<div class="msg info">Chưa có yêu cầu điều chuyển nào liên quan đến bạn. Đội trưởng tạo yêu cầu ở mục "Điều phối"; người chuyển đi và người nhận xác nhận tại đây.</div>'; return; }
+    m.innerHTML = '<div class="msg info" style="margin-bottom:10px">Vật tư chỉ được trừ tồn khi cả người chuyển đi lẫn người nhận đã xác nhận.</div>' + l.map(function (x) {
+      var cho = x.tt === 'Chờ xác nhận', cls = x.tt === 'Đã chuyển' ? 'ok' : cho ? '' : 'no';
+      return '<div class="card dcx"><div class="dcxh"><b>' + esc(x.tu) + ' → ' + esc(x.den) + '</b><span class="chip2 ' + cls + '">' + esc(x.tt) + '</span></div>' +
+        '<div class="muted" style="font-size:12.5px">' + ngay(x.t) + ' · Người lập: ' + esc(x.by) + ' · ' + esc(x.id) + '</div>' +
+        '<table class="dtbl" style="margin:8px 0"><thead><tr><th>Vật tư</th><th class="r">Số lượng</th></tr></thead><tbody>' + x.items.map(function (it) { return '<tr><td>' + esc(it[1]) + '<div class="muted" style="font-size:12px">' + esc(it[0]) + '</div></td><td class="r">' + num(it[3]) + ' ' + esc(it[2]) + '</td></tr>'; }).join('') + '</tbody></table>' +
+        '<div class="stp">Người chuyển đi (' + esc(x.tu) + '): ' + (x.aOk ? '✅ đã xác nhận' : '⏳ chờ xác nhận') + '<br>Người nhận (' + esc(x.den) + '): ' + (x.bOk ? '✅ đã xác nhận' : '⏳ chờ xác nhận') + '</div>' +
+        ((x.canA || x.canB || x.canHuy) ? '<div class="acts">' + ((x.canA || x.canB) ? '<button class="btn ok" data-ok="' + esc(x.id) + '" data-side="' + (x.canA ? 'A' : 'B') + '">' + (x.canA ? 'Xác nhận chuyển đi' : 'Xác nhận đã nhận') + '</button>' : '') + (x.canNo ? '<button class="btn bad" data-no="' + esc(x.id) + '">Từ chối</button>' : '') + (x.canHuy ? '<button class="btn" data-huy="' + esc(x.id) + '">Hủy yêu cầu</button>' : '') + '</div>' : '') + '</div>';
+    }).join('');
+    function find(id) { return l.filter(function (x) { return x.id === id; })[0]; }
+    function chay(fn, args, okMsg) { busy(true, 'Đang xử lý…'); api.apply(null, [fn, S.token].concat(args)).then(function (r) { busy(false); toast(okMsg(r)); viewXN(); dcBadge(); }).catch(function (e) { busy(false); toast(loi(e), 'err'); }); }
+    $$('[data-ok]', m).forEach(function (b) { b.onclick = function () {
+      var x = find(b.dataset.ok), a = b.dataset.side === 'A';
+      confirmBox(a ? 'Xác nhận chuyển đi' : 'Xác nhận đã nhận', (a ? 'Bạn xác nhận chuyển ' : 'Bạn xác nhận nhận ') + x.items.length + ' loại vật tư (' + x.tu + ' → ' + x.den + ')? Khi cả hai bên đã xác nhận, tồn kho trừ và cộng ngay.', 'Xác nhận', function () {
+        chay('dcXacNhan', [x.id, true], function (r) { return r.daChuyen ? 'Đã chuyển xong, tồn kho đã cập nhật.' : 'Đã xác nhận. Đang chờ ' + (r.cho || 'bên kia') + ' xác nhận.'; });
+      }); }; });
+    $$('[data-no]', m).forEach(function (b) { b.onclick = function () { confirmBox('Từ chối yêu cầu', 'Từ chối yêu cầu này? Tồn kho giữ nguyên.', 'Từ chối', function () { chay('dcXacNhan', [b.dataset.no, false], function () { return 'Đã từ chối yêu cầu.'; }); }); }; });
+    $$('[data-huy]', m).forEach(function (b) { b.onclick = function () { confirmBox('Hủy yêu cầu', 'Hủy yêu cầu điều chuyển này?', 'Hủy yêu cầu', function () { chay('dcHuy', [b.dataset.huy], function () { return 'Đã hủy yêu cầu.'; }); }); }; });
+  }).catch(function (e) { m.innerHTML = '<div class="msg err">' + esc(loi(e)) + '</div>'; });
 }
 
 /* ======================= FORM LẬP / SỬA ======================= */
