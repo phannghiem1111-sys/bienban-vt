@@ -1613,19 +1613,37 @@ function qrMatrix(text) {
 }
 
 /* ======================= khởi động ======================= */
-function logoutLocal() { store('bbvt_token', null); S.token = null; S.user = null; renderLogin(); }
+function logoutLocal() {
+  store('bbvt_token', null); store(BOOT_KEY, null); S.token = null; S.user = null;
+  // Đang nhúng trong WCM TECHNICAL: báo WCM xin token mới để đăng nhập lại tự động
+  if (S.sso && window.parent !== window) { try { window.parent.postMessage({ type: 'bbvt:expired' }, '*'); } catch (e) {} }
+  renderLogin();
+}
+/* Lưu danh mục (vật tư, cửa hàng) + người dùng trên máy: lần sau mở app hiện ngay, dữ liệu mới tải ngầm phía sau */
+var BOOT_KEY = 'bbvt_boot';
+function keyMa(x) { return String(x || '').toLowerCase().replace(/^0+/, ''); }
+function applyBoot(d) { S.user = d.user; S.logo = d.logo || S.logo; S.vatTu = d.vatTu; S.stores = d.stores; S.hangMuc = d.hangMuc; S.deXuat = d.deXuat; S.status = d.status; S.soNgayCanhBao = d.soNgayCanhBao; }
+function saveBoot(d) { try { localStorage.setItem(BOOT_KEY, JSON.stringify({ t: Date.now(), tok: S.token, d: d })); } catch (e) { store(BOOT_KEY, null); } }
+function navSig(u) { return u ? [u.vaiTro, u.laDuyet, u.laQuanLy, u.xuat, u.hoTen, u.mien].join('|') : ''; }
 function start() {
   // Mở từ WCM TECHNICAL: token đăng nhập chung truyền qua #sso=… (không gửi lên máy chủ trang), lưu rồi xóa khỏi địa chỉ
-  var mSso = /[#&]sso=([\w-]+)/.exec(location.hash || '');
-  if (mSso) { store('bbvt_token', mSso[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+  var mSso = /[#&]sso=([\w-]+)/.exec(location.hash || ''), mMa = /[#&]ma=([^&]+)/.exec(location.hash || '');
+  if (mSso) { S.sso = true; store('bbvt_token', mSso[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
   S.token = store('bbvt_token');
   if (!S.token) return renderLogin();
-  busy(true, 'Đang tải danh mục…');
+  var home = function () { return S.user.laQuanLy ? 'dash' : S.user.laDuyet ? 'team' : 'mine'; };
+  // Có bản lưu trên máy của đúng người này (≤ 7 ngày): mở ngay, không chờ máy chủ
+  var c = null; try { c = JSON.parse(localStorage.getItem(BOOT_KEY) || 'null'); } catch (e) {}
+  var ma = mMa ? keyMa(decodeURIComponent(mMa[1])) : '';
+  var hit = c && c.d && c.d.user && Date.now() - c.t < 7 * 864e5 && (c.tok === S.token || (ma && keyMa(c.d.user.maNV) === ma));
+  if (hit) { applyBoot(c.d); shell(); go(home()); dcBadge(); }
+  else busy(true, 'Đang tải danh mục…');
   api('bootstrap', S.token).then(function (d) {
-    busy(false);
-    S.user = d.user; S.logo = d.logo || S.logo; S.vatTu = d.vatTu; S.stores = d.stores; S.hangMuc = d.hangMuc; S.deXuat = d.deXuat; S.status = d.status; S.soNgayCanhBao = d.soNgayCanhBao;
-    shell(); go(S.user.laQuanLy ? 'dash' : S.user.laDuyet ? 'team' : 'mine'); dcBadge();
-  }).catch(function (e) { busy(false); renderLogin(e.message); });
+    var before = navSig(S.user);
+    applyBoot(d); saveBoot(d);
+    if (!hit) { busy(false); shell(); go(home()); dcBadge(); }
+    else if (navSig(d.user) !== before) { shell(); go(home()); } // vai trò thay đổi: dựng lại menu
+  }).catch(function (e) { if (!hit) { busy(false); renderLogin(e.message); } else if (S.token) toast('Chưa cập nhật được danh mục mới: ' + e.message); });
 }
 
 function renderLogin(err) {
