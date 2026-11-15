@@ -1615,6 +1615,9 @@ function qrMatrix(text) {
 /* ======================= khởi động ======================= */
 function logoutLocal() { store('bbvt_token', null); S.token = null; S.user = null; renderLogin(); }
 function start() {
+  // Mở từ WCM TECHNICAL: token đăng nhập chung truyền qua #sso=… (không gửi lên máy chủ trang), lưu rồi xóa khỏi địa chỉ
+  var mSso = /[#&]sso=([\w-]+)/.exec(location.hash || '');
+  if (mSso) { store('bbvt_token', mSso[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
   S.token = store('bbvt_token');
   if (!S.token) return renderLogin();
   busy(true, 'Đang tải danh mục…');
