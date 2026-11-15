@@ -2518,12 +2518,12 @@ function viewDC() {
   var admin = S.user.vaiTro !== 'Đội trưởng';
   function nm(p) { return p.hoTen || p.ten; }
   Promise.all([api('xuatTon', S.token), api('dieuChuyenLichSu', S.token).catch(function () { return null; })]).then(function (res) {
-    var d = res[0], hist = res[1], ppl = d.nguoi.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), 'vi'); }), qty = {}, A = '', B = '';
+    var d = res[0], hist = res[1], ext = [], ppl = d.nguoi.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), 'vi'); }), qty = {}, A = '', B = '';
     if (!ppl.length) { m.innerHTML = '<div class="empty">Chưa có nhân viên nào trong phạm vi của bạn.</div>'; return; }
     ppl.forEach(function (p) { p.items = p.items.filter(function (it) { return it[3] > 0; }); }); // chỉ vật tư đang còn tồn dương mới chuyển được
     var optA = '<option value="">Chuyển từ nhân viên…</option>' + ppl.filter(function (p) { return p.items.length; }).map(function (p) { return '<option value="' + esc(p.ten) + '">' + esc(nm(p)) + ' (' + p.items.length + ' loại)</option>'; }).join('');
     m.innerHTML = '<div class="dtabs" style="margin-top:0"><button type="button" class="btn on" id="dcT1">Chuyển giữa nhân viên</button><button type="button" class="btn" id="dcT2">Thu hồi từ cửa hàng đóng cửa</button></div><div id="dcMain"><div class="msg info" style="margin-bottom:10px">' + (admin ? 'Quản trị: điều chuyển giữa mọi nhân viên.' : 'Đội trưởng: điều chuyển giữa các nhân viên trong đội của bạn.') + ' Bạn tạo yêu cầu; người chuyển đi và người nhận đều phải xác nhận. Sau khi cả hai xác nhận, tồn kho mới trừ ở người đi và cộng cho người nhận.</div>' +
-      '<div class="card dpick"><div class="dcsel"><select id="dcA">' + optA + '</select><span class="dcar">→</span><select id="dcB"></select></div></div>' +
+      '<div class="card dpick"><div class="dcsel"><select id="dcA">' + optA + '</select><span class="dcar">→</span><select id="dcB"></select></div><div id="dcMs" class="hidden" style="display:flex;gap:8px;margin-top:8px"><input id="dcMsI" type="text" inputmode="numeric" placeholder="Nhập MSNV người nhận (chưa có kho vật tư)" style="flex:1"><button type="button" class="btn" id="dcMsGo">Tìm</button></div></div>' +
       '<div id="dcBody"></div>' +
       '<div class="dcbar hidden" id="dcBar"><span id="dcSum"></span><button class="btn pri" id="dcGo">Gửi yêu cầu điều chuyển</button></div>' +
       '<h3 class="dh">Lịch sử điều chuyển gần đây</h3><div id="dcHist"></div></div><div id="dcTH" class="hidden"></div>';
@@ -2531,10 +2531,12 @@ function viewDC() {
     $('#dcT2').onclick = function () { $('#dcMain').classList.add('hidden'); $('#dcTH').classList.remove('hidden'); $('#dcT2').classList.add('on'); $('#dcT1').classList.remove('on'); $('#dcBar').classList.add('hidden'); };
     thuHoiUI($('#dcTH'), ppl);
     function drawB() {
-      $('#dcB').innerHTML = '<option value="">Sang nhân viên…</option>' + ppl.filter(function (p) { return p.ten !== A; }).map(function (p) { return '<option value="' + esc(p.ten) + '"' + (p.ten === B ? ' selected' : '') + '>' + esc(nm(p)) + '</option>'; }).join('');
-      if (!ppl.some(function (p) { return p.ten === B && p.ten !== A; })) B = '';
+      var all = ppl.concat(ext);
+      $('#dcB').innerHTML = '<option value="">Sang nhân viên…</option>' + all.filter(function (p) { return p.ten !== A; }).map(function (p) { return '<option value="' + esc(p.ten) + '"' + (p.ten === B ? ' selected' : '') + '>' + esc(nm(p)) + (p.moi ? ' (chưa có kho)' : '') + '</option>'; }).join('') +
+        '<option value="__msnv">＋ Người chưa có kho: nhập MSNV…</option>';
+      if (!all.some(function (p) { return p.ten === B && p.ten !== A; })) B = '';
     }
-    function who(t) { var p = ppl.filter(function (x) { return x.ten === t; })[0]; return p ? nm(p) : t; }
+    function who(t) { var p = ppl.concat(ext).filter(function (x) { return x.ten === t; })[0]; return p ? nm(p) : t; }
     function summary() {
       var n = Object.keys(qty).filter(function (k) { return qty[k] > 0; }).length;
       $('#dcBar').classList.toggle('hidden', !n);
@@ -2576,7 +2578,24 @@ function viewDC() {
       }).join('') + '</tbody></table></div>' : '<div class="muted">Chưa có lần điều chuyển nào.</div>';
     }
     $('#dcA').onchange = function () { A = this.value; qty = {}; drawB(); drawBody(); };
-    $('#dcB').onchange = function () { B = this.value; summary(); };
+    $('#dcB').onchange = function () {
+      if (this.value === '__msnv') { B = ''; $('#dcMs').classList.remove('hidden'); $('#dcMsI').focus(); this.value = ''; summary(); return; }
+      B = this.value; summary();
+    };
+    // Người nhận chưa có cột kho trong "Tồn kho": tra MSNV trong sheet NhanVien
+    function timMs() {
+      var ma = $('#dcMsI').value.trim();
+      if (!ma) return;
+      busy(true, 'Đang tìm nhân viên…');
+      api('timNguoiNhan', S.token, ma).then(function (r) {
+        busy(false);
+        if (r.ten === A) { toast('Người nhận phải khác người chuyển đi.', 'err'); return; }
+        if (!ppl.concat(ext).some(function (p) { return p.ten === r.ten; })) ext.push({ ten: r.ten, hoTen: r.hoTen + ' · ' + r.maNV, moi: !r.coKho, items: [] });
+        B = r.ten; $('#dcMsI').value = ''; $('#dcMs').classList.add('hidden'); drawB(); summary();
+      }).catch(function (e) { busy(false); var t = (e && e.message) || String(e); toast(/apply|not a function|undefined|không hợp lệ/i.test(t) ? 'Máy chủ chưa có chức năng này. Cần dán Code.gs bản mới rồi Deploy phiên bản mới.' : t, 'err'); });
+    }
+    $('#dcMsGo').onclick = timMs;
+    $('#dcMsI').onkeydown = function (e) { if (e.key === 'Enter') timMs(); };
     $('#dcGo').onclick = function () {
       var dong = Object.keys(qty).filter(function (k) { return qty[k] > 0; }).map(function (k) { return { ma: k, sl: qty[k] }; });
       if (!A || !B || !dong.length) return;
